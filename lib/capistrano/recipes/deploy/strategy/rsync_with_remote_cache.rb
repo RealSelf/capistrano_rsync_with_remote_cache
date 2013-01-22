@@ -25,6 +25,7 @@ module Capistrano
 
         def deploy!
           update_local_cache
+          deploy.prep_code.default
           update_remote_cache
           copy_remote_cache
         end
@@ -44,7 +45,13 @@ module Capistrano
         end
         
         def rsync_command_for(server)
-          "rsync #{rsync_options} --rsh='ssh -p #{ssh_port(server)}' #{local_cache_path}/ #{rsync_host(server)}:#{repository_cache_path}/"
+          if copy_exclude.empty?
+            exclusions = ''
+          else
+            exclusions = copy_exclude.map { |e| "--exclude=\"#{e}\"" }.join(' ')
+          end
+
+          "rsync #{rsync_options} #{exclusions} --rsh='ssh -p #{ssh_port(server)}' #{local_cache_path}/ #{rsync_host(server)}:#{repository_cache_path}/"
         end
         
         def mark_local_cache
@@ -90,6 +97,10 @@ module Capistrano
         
         def local_cache_valid?
           local_cache_exists? && File.directory?(local_cache_path)
+        end
+
+        def copy_exclude
+          @copy_exclude ||= Array(configuration.fetch(:copy_exclude, []))
         end
 
         # Defines commands that should be checked for by deploy:check. These include the SCM command
