@@ -41,17 +41,11 @@ module Capistrano
         end
         
         def copy_remote_cache
-          run("rsync -a --delete #{repository_cache_path}/ #{configuration[:release_path]}/")
+          run("rsync -a --delete #{rsync_exclude} #{repository_cache_path}/ #{configuration[:release_path]}/")
         end
         
         def rsync_command_for(server)
-          if copy_exclude.empty?
-            exclusions = ''
-          else
-            exclusions = copy_exclude.map { |e| "--exclude=\"#{e}\"" }.join(' ')
-          end
-
-          "rsync #{rsync_options} #{exclusions} --rsh='ssh -p #{ssh_port(server)}' #{local_cache_path}/ #{rsync_host(server)}:#{repository_cache_path}/"
+          "rsync #{rsync_options} #{rsync_exclude} --rsh='ssh -p #{ssh_port(server)}' #{local_cache_path}/ #{rsync_host(server)}:#{repository_cache_path}/"
         end
         
         def mark_local_cache
@@ -97,6 +91,16 @@ module Capistrano
         
         def local_cache_valid?
           local_cache_exists? && File.directory?(local_cache_path)
+        end
+
+        def rsync_exclude
+          if copy_exclude.empty?
+            exclude = ''
+          else
+            exclude = copy_exclude.map { |e| "--exclude=\"#{e}\"" }.join(' ')
+          end
+
+          exclude
         end
 
         def copy_exclude
